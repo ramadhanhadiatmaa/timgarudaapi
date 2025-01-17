@@ -1,7 +1,7 @@
 package models
 
 type User struct {
-	Email     string    `gorm:"type:varchar(100);primaryKey;" json:"email"`
+	ID        int       `gorm:"primaryKey;autoIncrement" json:"id"`
 }
 
 func (User) TableName() string {

@@ -14,6 +14,7 @@ jobs:
         service:
           - auth
           - data
+          - news
 
     steps:
       # Checkout code
@@ -56,6 +57,7 @@ jobs:
             # Pull the latest Docker images
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/auth-garuda:v1.0
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/data-garuda:v1.0
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/news-garuda:v1.0
 
             # Start services using docker-compose
             sudo docker-compose -f /var/www/garuda/docker-compose.yml up -d

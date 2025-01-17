@@ -13,7 +13,6 @@ func Route(app *fiber.App) {
 
 	user.Post("/login", controllers.Login)
 	user.Post("/register", controllers.Register)
-	user.Put("/upload/:email", controllers.UploadUserImage)
-	user.Put("/:email", controllers.Update)
-	user.Delete("/:email", controllers.Delete)
+	user.Put("/:id", controllers.Update)
+	user.Delete("/:id", controllers.Delete)
 }

@@ -7,14 +7,14 @@ COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 go build -o auth-garuda
+RUN CGO_ENABLED=0 go build -o news-garuda
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=build /app/auth-garuda .
+COPY --from=build /app/news-garuda .
 
-EXPOSE 6710
+EXPOSE 6712
 
-CMD [ "./auth-garuda" ]
+CMD [ "./news-garuda" ]

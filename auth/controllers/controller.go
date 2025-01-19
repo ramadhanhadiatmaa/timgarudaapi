@@ -109,7 +109,7 @@ func Update(c *fiber.Ctx) error {
 
 	var updateData models.User
 	if err := c.BodyParser(&updateData); err != nil {
-		return jsonResponse(c, fiber.StatusBadRequest, "Invalid input", err.Error())
+		return jsonResponse(c, fiber.StatusBadRequest, "Invalid", err.Error())
 	}
 
 	if updateData.ID != 0 && updateData.ID != id {

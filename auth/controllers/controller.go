@@ -55,7 +55,7 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	err := models.DB.Debug().Preload("TypeInfo").First(&user, "email = ?", data["email"]).Error
+	err := models.DB.Debug().Preload("TypeInfo").Where("email = ?", data["email"]).First(&user).Error
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
@@ -77,7 +77,6 @@ func Login(c *fiber.Ctx) error {
 		"exp":   time.Now().Add(time.Hour * 240).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 	t, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})

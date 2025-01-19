@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"auth/models"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -46,7 +47,7 @@ func Register(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User registered successfully"})
 }
 
-func Login(c *fiber.Ctx) error {	
+func Login(c *fiber.Ctx) error {
 	var data map[string]string
 
 	if err := c.BodyParser(&data); err != nil {
@@ -54,9 +55,12 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	if err := models.DB.Preload("TypeInfo").First(&user, "email = ?", data["email"]).Error; err != nil {
+	err := models.DB.Debug().Preload("TypeInfo").First(&user, "email = ?", data["email"]).Error
+	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
+
+	fmt.Printf("User: %+v\n", user)
 
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
@@ -78,6 +82,8 @@ func Login(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
+
+	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
 
 	return c.JSON(fiber.Map{
 		"token":     t,

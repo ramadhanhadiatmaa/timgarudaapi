@@ -12,6 +12,7 @@ type User struct {
 	TypeInfo  TypeUser  `gorm:"foreignKey:Type;references:ID" json:"type_info"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	TypeName  string    `gorm:"-" json:"type_name"`
 }
 
 type TypeUser struct {

@@ -55,12 +55,14 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	// Fetch user with explicit Joins (instead of Preload)
+	// Fetch user with Preload for TypeInfo
 	var user models.User
 	err := models.DB.Debug().
-		Joins("LEFT JOIN type_user t ON t.id = user.type"). // Join dengan tabel type_user
-		Where("email = ?", data["email"]).
-		First(&user).Error
+    Table("user").
+    Select("user.*, type_user.type AS type_name").
+    Joins("LEFT JOIN type_user ON type_user.id = user.type").
+    Where("user.email = ?", data["email"]).
+    First(&user).Error
 
 	// If there's an error, return unauthorized
 	if err != nil {
@@ -69,6 +71,7 @@ func Login(c *fiber.Ctx) error {
 
 	// Print user details to verify if the data is correct
 	fmt.Printf("User: %+v\n", user)
+	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
 
 	// Compare password
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
@@ -92,13 +95,16 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
+	// Print TypeInfo to debug if the data is correctly populated
+	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
+
 	// Return user info along with the token
 	return c.JSON(fiber.Map{
 		"token":     t,
 		"email":     user.Email,
 		"phone":     user.Phone,
 		"full_name": user.FullName,
-		"type":      user.Type, // Directly return the type from the user
+		"type":      user.TypeName, // This should now show the correct type from TypeUser table
 	})
 }
 

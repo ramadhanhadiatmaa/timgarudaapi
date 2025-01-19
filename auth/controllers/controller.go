@@ -46,8 +46,7 @@ func Register(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User registered successfully"})
 }
 
-func Login(c *fiber.Ctx) error {
-
+func Login(c *fiber.Ctx) error {	
 	var data map[string]string
 
 	if err := c.BodyParser(&data); err != nil {

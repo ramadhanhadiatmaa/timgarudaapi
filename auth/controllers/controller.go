@@ -50,46 +50,62 @@ func Register(c *fiber.Ctx) error {
 func Login(c *fiber.Ctx) error {
 	var data map[string]string
 
+	// Parse input data
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
 	var user models.User
-	err := models.DB.Debug().Preload("TypeInfo").Where("email = ?", data["email"]).First(&user).Error
+	// Use Joins to explicitly perform a LEFT JOIN between `user` and `type_user`
+	err := models.DB.Debug().Joins("LEFT JOIN type_user ON type_user.id = user.type").
+		Where("email = ?", data["email"]).
+		First(&user).Error
+
+	// If there's an error, return unauthorized
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
 
+	// Print user details to verify if the data is correct
 	fmt.Printf("User: %+v\n", user)
 
+	// Compare password hash with input password
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
 
+	// Generate JWT token
 	secretKey := os.Getenv("SECRET_KEY")
 	if secretKey == "" {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Secret key not configured"})
 	}
 
+	// Create JWT claims
 	claims := jwt.MapClaims{
 		"email": user.Email,
 		"type":  user.Type,
 		"exp":   time.Now().Add(time.Hour * 240).Unix(),
 	}
+
+	// Create the token with the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Sign the token and get the result
 	t, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
+	// Print TypeInfo to verify if it was preloaded correctly
 	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
 
+	// Return the response with the token and user info
 	return c.JSON(fiber.Map{
 		"token":     t,
 		"email":     user.Email,
 		"phone":     user.Phone,
 		"full_name": user.FullName,
-		"type":      user.TypeInfo.Type,
+		"type":      user.TypeInfo.Type, // This should now show the correct type from TypeUser table
 	})
 }
 

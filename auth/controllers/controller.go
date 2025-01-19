@@ -55,9 +55,10 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
+	// Fetch user with Preload for TypeInfo
 	var user models.User
-	// Use Joins to explicitly perform a LEFT JOIN between `user` and `type_user`
-	err := models.DB.Debug().Joins("LEFT JOIN type_user ON type_user.id = user.type").
+	err := models.DB.Debug().
+		Preload("TypeInfo"). // Preload relasi TypeInfo dari type_user
 		Where("email = ?", data["email"]).
 		First(&user).Error
 
@@ -69,7 +70,7 @@ func Login(c *fiber.Ctx) error {
 	// Print user details to verify if the data is correct
 	fmt.Printf("User: %+v\n", user)
 
-	// Compare password hash with input password
+	// Compare password
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
@@ -80,26 +81,21 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Secret key not configured"})
 	}
 
-	// Create JWT claims
 	claims := jwt.MapClaims{
 		"email": user.Email,
-		"type":  user.Type,
+		"type":  user.Type, // The type ID from user
 		"exp":   time.Now().Add(time.Hour * 240).Unix(),
 	}
-
-	// Create the token with the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Sign the token and get the result
 	t, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
-	// Print TypeInfo to verify if it was preloaded correctly
+	// Print TypeInfo to debug if the data is correctly populated
 	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
 
-	// Return the response with the token and user info
+	// Return user info along with the token
 	return c.JSON(fiber.Map{
 		"token":     t,
 		"email":     user.Email,

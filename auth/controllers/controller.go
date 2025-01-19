@@ -71,7 +71,6 @@ func Login(c *fiber.Ctx) error {
 
 	// Print user details to verify if the data is correct
 	fmt.Printf("User: %+v\n", user)
-	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
 
 	// Compare password
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
@@ -94,9 +93,6 @@ func Login(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
-
-	// Print TypeInfo to debug if the data is correctly populated
-	fmt.Printf("TypeInfo: %+v\n", user.TypeInfo)
 
 	// Return user info along with the token
 	return c.JSON(fiber.Map{

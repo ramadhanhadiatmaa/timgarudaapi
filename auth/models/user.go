@@ -9,10 +9,9 @@ type User struct {
 	FullName  string    `gorm:"type:varchar(255)" json:"full_name"`
 	Phone     string    `gorm:"type:varchar(20)" json:"phone"`
 	Type      int       `gorm:"type:int(11)" json:"type"`
-	TypeInfo  TypeUser  `gorm:"foreignKey:Type;references:ID" json:"type_info"`
+	TypeName  string    `gorm:"column:type_name" json:"type_name"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
-	TypeName  string    `gorm:"-" json:"type_name"`
 }
 
 type TypeUser struct {

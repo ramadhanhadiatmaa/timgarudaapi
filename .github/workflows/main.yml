@@ -12,7 +12,9 @@ jobs:
     strategy:
       matrix:
         service:
+          - data
           - auth
+          - news
 
     steps:
       # Checkout code

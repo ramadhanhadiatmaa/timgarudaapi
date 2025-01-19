@@ -21,6 +21,7 @@ func Route(app *fiber.App) {
 	news.Get("/", controllers.ShowNews)
 	news.Get("/:id", controllers.IndexNews)
 	news.Post("/", controllers.CreateNews)
+	news.Post("/upload", controllers.UploadNewsImage)
 	news.Put("/:id", controllers.UpdateNews)
 	news.Delete("/:id", controllers.DeleteNews)
 

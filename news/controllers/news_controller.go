@@ -3,10 +3,13 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"mime/multipart"
+	"net/http"
 	"news/models"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -131,13 +134,14 @@ func DeleteNews(c *fiber.Ctx) error {
 	return jsonResponse(c, fiber.StatusOK, "Successfully deleted data", nil)
 }
 
+// Fungsi utama upload image
 func UploadNewsImage(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Validasi ID
 	if id == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "ID is required",
+			"error": "id is required",
 		})
 	}
 
@@ -145,26 +149,33 @@ func UploadNewsImage(c *fiber.Ctx) error {
 	newsID, err := strconv.Atoi(id)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid ID format",
+			"error": "invalid id format",
 		})
 	}
 
 	// Ambil file dari request
 	file, err := c.FormFile("image")
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		fmt.Println("error reading file:", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Unable to read the file. Ensure 'image' key is included in the form-data request.",
+			"error": "unable to read the file. ensure 'image' key is included in the form-data request",
 		})
 	}
 
 	fmt.Printf("File received: %s (Size: %d bytes)\n", file.Filename, file.Size)
 
-	// Validasi ukuran file
+	// Validasi ukuran file (maks 5 MB)
 	const maxFileSize = 5 * 1024 * 1024 // 5 MB
 	if file.Size > maxFileSize {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "File size exceeds 5 MB limit",
+			"error": "file size exceeds 5 MB limit",
+		})
+	}
+
+	// Validasi tipe file dengan MIME
+	if err := validateFileType(file); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
 
@@ -173,41 +184,53 @@ func UploadNewsImage(c *fiber.Ctx) error {
 	if err := models.DB.First(&news, "id = ?", newsID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "News with the given ID not found",
+				"error": "news with the given id not found",
 			})
 		}
-		fmt.Println("Database error:", err)
+		fmt.Println("database error:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
+			"error": "database error",
 		})
 	}
 
 	// Direktori upload
 	uploadDir := "/var/www/html/images/garuda/news"
 	if err := ensureDirectoryExists(uploadDir); err != nil {
-		fmt.Println("Error ensuring directory exists:", err)
+		fmt.Println("error ensuring directory exists:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create upload directory",
-		})
-	}
-
-	// Buat nama file berdasarkan ID
-	ext := filepath.Ext(file.Filename)
-	if ext == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid file type",
+			"error": "failed to create upload directory",
 		})
 	}
 
 	// Sanitasi nama file
+	ext := filepath.Ext(file.Filename)
+	allowedExtensions := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".gif":  true,
+	}
+	if !allowedExtensions[ext] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "unsupported file type",
+		})
+	}
+
 	fileName := fmt.Sprintf("%d%s", newsID, ext)
 	filePath := filepath.Join(uploadDir, fileName)
 
+	// Pastikan path tetap di dalam direktori yang diizinkan
+	if !strings.HasPrefix(filepath.Clean(filePath), filepath.Clean(uploadDir)) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "invalid file path",
+		})
+	}
+
 	// Simpan file
 	if err := c.SaveFile(file, filePath); err != nil {
-		fmt.Printf("Error saving file (%s): %v\n", filePath, err)
+		fmt.Printf("error saving file (%s): %v\n", filePath, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to save the file",
+			"error": "failed to save the file",
 		})
 	}
 
@@ -218,14 +241,14 @@ func UploadNewsImage(c *fiber.Ctx) error {
 	news.Image = publicURL
 	news.UpdatedAt = time.Now()
 	if err := models.DB.Save(&news).Error; err != nil {
-		fmt.Println("Error updating database:", err)
+		fmt.Println("error updating database:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update news image",
+			"error": "failed to update news image",
 		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message":    "Image uploaded successfully",
+		"message":    "image uploaded successfully",
 		"image_path": publicURL,
 	})
 }
@@ -237,3 +260,30 @@ func ensureDirectoryExists(dir string) error {
 	}
 	return nil
 }
+
+// Fungsi untuk validasi tipe file menggunakan MIME
+func validateFileType(file *multipart.FileHeader) error {
+	fileHeader, err := file.Open()
+	if err != nil {
+		return fmt.Errorf("unable to open file")
+	}
+	defer fileHeader.Close()
+
+	buffer := make([]byte, 512)
+	if _, err := fileHeader.Read(buffer); err != nil {
+		return fmt.Errorf("unable to read file header")
+	}
+
+	// Deteksi tipe MIME
+	mimeType := http.DetectContentType(buffer)
+	allowedMimeTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/gif":  true,
+	}
+	if !allowedMimeTypes[mimeType] {
+		return fmt.Errorf("invalid file type")
+	}
+	return nil
+}
+

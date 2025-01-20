@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"auth/models"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -47,22 +48,36 @@ func Register(c *fiber.Ctx) error {
 }
 
 func Login(c *fiber.Ctx) error {
-
 	var data map[string]string
 
+	// Parse input data
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
+	// Fetch user with Preload for TypeInfo
 	var user models.User
-	if err := models.DB.Preload("TypeInfo").First(&user, "email = ?", data["email"]).Error; err != nil {
+	err := models.DB.Debug().
+    Table("user").
+    Select("user.*, type_user.type AS type_name").
+    Joins("LEFT JOIN type_user ON type_user.id = user.type").
+    Where("user.email = ?", data["email"]).
+    First(&user).Error
+
+	// If there's an error, return unauthorized
+	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
 
+	// Print user details to verify if the data is correct
+	fmt.Printf("User: %+v\n", user)
+
+	// Compare password
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
 	}
 
+	// Generate JWT token
 	secretKey := os.Getenv("SECRET_KEY")
 	if secretKey == "" {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Secret key not configured"})
@@ -70,22 +85,22 @@ func Login(c *fiber.Ctx) error {
 
 	claims := jwt.MapClaims{
 		"email": user.Email,
-		"type":  user.Type,
+		"type":  user.Type, // The type ID from user
 		"exp":   time.Now().Add(time.Hour * 240).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 	t, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
+	// Return user info along with the token
 	return c.JSON(fiber.Map{
 		"token":     t,
 		"email":     user.Email,
 		"phone":     user.Phone,
 		"full_name": user.FullName,
-		"type":      user.TypeInfo.Type,
+		"type":      user.TypeName, // This should now show the correct type from TypeUser table
 	})
 }
 
@@ -105,7 +120,7 @@ func Update(c *fiber.Ctx) error {
 
 	var updateData models.User
 	if err := c.BodyParser(&updateData); err != nil {
-		return jsonResponse(c, fiber.StatusBadRequest, "Invalid input", err.Error())
+		return jsonResponse(c, fiber.StatusBadRequest, "Invalid", err.Error())
 	}
 
 	if updateData.ID != 0 && updateData.ID != id {

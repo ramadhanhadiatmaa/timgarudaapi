@@ -150,14 +150,23 @@ func UploadNewsImage(c *fiber.Ctx) error {
 	}
 
 	// Ambil file dari request
-	file, err := c.FormFile("image_path")
+	file, err := c.FormFile("image")
 	if err != nil {
+		fmt.Println("Error reading file:", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Unable to read the file",
+			"error": "Unable to read the file. Ensure 'image' key is included in the form-data request.",
 		})
 	}
 
 	fmt.Printf("File received: %s (Size: %d bytes)\n", file.Filename, file.Size)
+
+	// Validasi ukuran file
+	const maxFileSize = 5 * 1024 * 1024 // 5 MB
+	if file.Size > maxFileSize {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "File size exceeds 5 MB limit",
+		})
+	}
 
 	// Cek apakah berita dengan ID tersebut ada
 	var news models.News
@@ -184,13 +193,19 @@ func UploadNewsImage(c *fiber.Ctx) error {
 
 	// Buat nama file berdasarkan ID
 	ext := filepath.Ext(file.Filename)
-	safeFileName := sanitizeFilename(file.Filename)
+	if ext == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid file type",
+		})
+	}
+
+	// Sanitasi nama file
 	fileName := fmt.Sprintf("%d%s", newsID, ext)
-	filePath := filepath.Join(uploadDir, safeFileName)
+	filePath := filepath.Join(uploadDir, fileName)
 
 	// Simpan file
 	if err := c.SaveFile(file, filePath); err != nil {
-		fmt.Println("Error saving file:", err)
+		fmt.Printf("Error saving file (%s): %v\n", filePath, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to save the file",
 		})
@@ -221,9 +236,4 @@ func ensureDirectoryExists(dir string) error {
 		return os.MkdirAll(dir, 0755)
 	}
 	return nil
-}
-
-// Fungsi untuk sanitasi nama file
-func sanitizeFilename(filename string) string {
-	return filepath.Base(filename)
 }

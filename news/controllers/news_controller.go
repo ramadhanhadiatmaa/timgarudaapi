@@ -132,7 +132,6 @@ func DeleteNews(c *fiber.Ctx) error {
 		return jsonResponse(c, fiber.StatusBadRequest, "id is required", nil)
 	}
 
-	// Cek apakah berita dengan ID tersebut ada
 	var news models.News
 	if err := models.DB.First(&news, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -142,11 +141,9 @@ func DeleteNews(c *fiber.Ctx) error {
 		return jsonResponse(c, fiber.StatusInternalServerError, "database error", nil)
 	}
 
-	// Direktori upload
 	uploadDir := "/var/www/html/images/garuda/news"
 	filePath := filepath.Join(uploadDir, fmt.Sprintf("%s.jpg", id))
 
-	// Hapus file jika ada
 	if _, err := os.Stat(filePath); err == nil {
 		// File exists, attempt to delete
 		if err := os.Remove(filePath); err != nil {
@@ -160,7 +157,6 @@ func DeleteNews(c *fiber.Ctx) error {
 		return jsonResponse(c, fiber.StatusInternalServerError, "failed to check associated file", nil)
 	}
 
-	// Hapus data berita dari database
 	if models.DB.Delete(&models.News{}, id).RowsAffected == 0 {
 		return jsonResponse(c, fiber.StatusNotFound, "data not found or already deleted", nil)
 	}

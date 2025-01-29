@@ -9,6 +9,7 @@ import (
 
 func Route(app *fiber.App) {
 	api := app.Group("/v1", middlewares.Auth)
+	api2 := app.Group("/v1")
 
 	cat := api.Group("/category")
 	cat.Get("/", controllers.ShowCat)
@@ -18,12 +19,14 @@ func Route(app *fiber.App) {
 	cat.Delete("/:id", controllers.DeleteCat)
 
 	news := api.Group("/news")
-	news.Get("/", controllers.ShowNews)
 	news.Get("/:id", controllers.IndexNews)
 	news.Post("/", controllers.CreateNews)
 	news.Put("/upload/:id", controllers.UploadNewsImage)
 	news.Put("/:id", controllers.UpdateNews)
 	news.Delete("/:id", controllers.DeleteNews)
+
+	news2 := api2.Group("/news")
+	news2.Get("/", controllers.ShowNews)
 
 	comment := api.Group("/comment")
 	comment.Get("/", controllers.ShowNewsCom)

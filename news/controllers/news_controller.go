@@ -21,7 +21,9 @@ func ShowNews(c *fiber.Ctx) error {
 
 	if err := models.DB.Table("news").
 		Select("news.*, category.title AS category_name").
-		Joins("left join category on category.id = news.category").
+		Joins("LEFT JOIN category ON category.id = news.category").
+		Order("news.id DESC"). // Urutkan dari yang terbaru ke lama
+		Limit(100). // Opsional: Batasi jumlah data untuk optimasi performa
 		Find(&data).Error; err != nil {
 		return jsonResponse(c, fiber.StatusInternalServerError, "Failed to load data", err.Error())
 	}
@@ -29,40 +31,9 @@ func ShowNews(c *fiber.Ctx) error {
 	if len(data) == 0 {
 		return jsonResponse(c, fiber.StatusNotFound, "No data found", nil)
 	}
+
 	return c.JSON(data)
 }
-
-/* func ShowNews(c *fiber.Ctx) error {
-    var data []struct {
-        Image        string `json:"image"`
-        CategoryName string `json:"category_name"`
-    }
-
-    // Perform the join between news and category tables
-    if err := models.DB.Table("news").
-        Select("news.image, category.title as category_name").
-        Joins("left join category on news.category = category.id").
-        Find(&data).Error; err != nil {
-        return c.JSON(fiber.Map{
-            "status":  fiber.StatusInternalServerError,
-            "message": "Failed to load data",
-            "error":   err.Error(),
-        })
-    }
-
-    if len(data) == 0 {
-        return c.JSON(fiber.Map{
-            "status":  fiber.StatusNotFound,
-            "message": "No data found",
-        })
-    }
-
-    return c.JSON(fiber.Map{
-        "status":  fiber.StatusOK,
-        "message": "Data loaded successfully",
-        "data":    data,
-    })
-} */
 
 func IndexNews(c *fiber.Ctx) error {
 	id := c.Params("id")

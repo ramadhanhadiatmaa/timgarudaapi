@@ -1,7 +1,7 @@
 package models
 
 type TypeUser struct {
-	ID   int    `gorm:"type:int(11);primaryKey;autoIncrement" json:"id"`
+	ID   int    `gorm:"primaryKey;autoIncrement" json:"id"`
 	Type string `gorm:"type:varchar(30);not null" json:"type"`
 }
 

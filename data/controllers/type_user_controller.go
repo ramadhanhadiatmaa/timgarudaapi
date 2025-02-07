@@ -7,17 +7,17 @@ import (
 )
 
 func CreateType(c *fiber.Ctx) error {
-	var type_user models.TypeUser
+	var data models.TypeUser
 
-	if err := c.BodyParser(&type_user); err != nil {
+	if err := c.BodyParser(&data); err != nil {
 		return jsonResponse(c, fiber.StatusBadRequest, "Invalid input", err.Error())
 	}
 
-	if err := models.DB.Create(&type_user).Error; err != nil {
+	if err := models.DB.Create(&data).Error; err != nil {
 		return jsonResponse(c, fiber.StatusInternalServerError, "Failed to save data", err.Error())
 	}
 
-	return jsonResponse(c, fiber.StatusCreated, "Data successfully added", type_user)
+	return jsonResponse(c, fiber.StatusCreated, "Data successfully added", data)
 }
 
 func DeleteType(c *fiber.Ctx) error {

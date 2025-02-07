@@ -19,21 +19,43 @@ func Show(c *fiber.Ctx) error {
 		return jsonResponse(c, fiber.StatusNotFound, "No schedules found", nil)
 	}
 
-	return c.JSON(data)
+	var schedule models.Schedule
+
+	return c.JSON(fiber.Map{
+		"id":        schedule.ID,
+		"home":      schedule.Home.Team,
+		"away":      schedule.Away.Team,
+		"flag_home": schedule.Home.Flag,
+		"flag_away": schedule.Away.Flag,
+		"venue":     schedule.Venue,
+		"date":      schedule.Date,
+	})
 }
 
 func Index(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var data models.Schedule
 
-	if err := models.DB.First(&data, "id = ?", id).Error; err != nil {
+	// Load data dengan preload Home dan Away
+	if err := models.DB.Preload("Home").Preload("Away").
+		First(&data, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return jsonResponse(c, fiber.StatusNotFound, "No data found", nil)
 		}
 		return jsonResponse(c, fiber.StatusInternalServerError, "Failed to load data", err.Error())
 	}
 
-	return c.JSON(data)
+	var schedule models.Schedule
+
+	return c.JSON(fiber.Map{
+		"id":        schedule.ID,
+		"home":      schedule.Home.Team,
+		"away":      schedule.Away.Team,
+		"flag_home": schedule.Home.Flag,
+		"flag_away": schedule.Away.Flag,
+		"venue":     schedule.Venue,
+		"date":      schedule.Date,
+	})
 }
 
 func Create(c *fiber.Ctx) error {

@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         service:
-          - news
+          - schedule
 
     steps:
       # Checkout code

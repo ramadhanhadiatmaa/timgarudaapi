@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         service:
-          - data
+          - auth
 
     steps:
       # Checkout code
@@ -33,7 +33,7 @@ jobs:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-garuda-dev:v1.0
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-garuda:v1.0
 
   deploy:
     environment: dev
@@ -53,7 +53,7 @@ jobs:
             sudo docker-compose -f /var/www/garudadev/docker-compose.yml down || true
             
             # Pull the latest Docker images
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/data-garuda-dev:v1.0
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/auth-garuda:v1.0
 
             # Start services using docker-compose
             sudo docker-compose -f /var/www/garudadev/docker-compose.yml up -d

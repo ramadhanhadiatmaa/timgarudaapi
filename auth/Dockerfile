@@ -15,6 +15,6 @@ WORKDIR /app
 
 COPY --from=build /app/auth-garuda .
 
-EXPOSE 6710
+EXPOSE 6410
 
 CMD [ "./auth-garuda" ]

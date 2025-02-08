@@ -7,14 +7,14 @@ COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 go build -o data-garuda-dev
+RUN CGO_ENABLED=0 go build -o data-garuda
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=build /app/data-garuda-dev .
+COPY --from=build /app/data-garuda .
 
 EXPOSE 6411
 
-CMD [ "./data-garuda-dev" ]
+CMD [ "./data-garuda" ]

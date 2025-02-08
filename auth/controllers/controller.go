@@ -14,6 +14,65 @@ import (
 )
 
 func Register(c *fiber.Ctx) error {
+	// Parsing input data
+	var data map[string]string
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	// Mengonversi tipe user dari string ke integer
+	typeUser, err := strconv.Atoi(data["type"])
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid Type User"})
+	}
+
+	// Mengecek apakah email sudah terdaftar
+	var existingUser models.User
+	if err := models.DB.First(&existingUser, "email = ?", data["email"]).Error; err == nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Email already exists"})
+	}
+
+	// Men-generate hash password
+	password, err := bcrypt.GenerateFromPassword([]byte(data["password"]), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not hash password"})
+	}
+
+	// Membuat objek user baru
+	user := models.User{
+		Email:     data["email"],
+		Password:  string(password),
+		FullName:  data["full_name"],
+		Phone:     data["phone"],
+		Type:      typeUser,
+		CreatedAt: time.Now(),
+	}
+
+	// Menyimpan user baru ke dalam database
+	if err := models.DB.Create(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not register user"})
+	}
+
+	// Mengambil informasi tipe user (TypeInfo) yang sudah terpreload
+	var newUser models.User
+	if err := models.DB.Preload("TypeInfo").First(&newUser, user.ID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not retrieve user type information"})
+	}
+
+	// Mengembalikan response sukses dengan data user yang baru terdaftar
+	return c.JSON(fiber.Map{
+		"message": "User registered successfully",
+		"user": fiber.Map{
+			"id":        newUser.ID,
+			"email":     newUser.Email,
+			"full_name": newUser.FullName,
+			"phone":     newUser.Phone,
+			"type":      newUser.TypeInfo.Type, // Menampilkan TypeInfo yang sudah terpreload
+		},
+	})
+}
+
+/* func Register(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
@@ -45,9 +104,9 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "User registered successfully"})
-}
+} */
 
-func Login(c *fiber.Ctx) error {
+/* func Login(c *fiber.Ctx) error {
 	var data map[string]string
 
 	// Parse input data
@@ -58,11 +117,11 @@ func Login(c *fiber.Ctx) error {
 	// Fetch user with Preload for TypeInfo
 	var user models.User
 	err := models.DB.Debug().
-    Table("user").
-    Select("user.*, type_user.type AS type_name").
-    Joins("LEFT JOIN type_user ON type_user.id = user.type").
-    Where("user.email = ?", data["email"]).
-    First(&user).Error
+		Table("user").
+		Select("user.*, type_user.type AS type_name").
+		Joins("LEFT JOIN type_user ON type_user.id = user.type").
+		Where("user.email = ?", data["email"]).
+		First(&user).Error
 
 	// If there's an error, return unauthorized
 	if err != nil {
@@ -100,7 +159,62 @@ func Login(c *fiber.Ctx) error {
 		"email":     user.Email,
 		"phone":     user.Phone,
 		"full_name": user.FullName,
-		"type":      user.TypeName, // This should now show the correct type from TypeUser table
+		"type":      user.TypeInfo.Type, // This should now show the correct type from TypeUser table
+	})
+} */
+
+func Login(c *fiber.Ctx) error {
+	var data map[string]string
+
+	// Parse input data
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	// Fetch user with Preload for TypeInfo (TypeUser)
+	var user models.User
+	err := models.DB.Debug().
+		Preload("TypeInfo"). // Preload TypeInfo to include the related TypeUser
+		Where("email = ?", data["email"]).
+		First(&user).Error
+
+	// If there's an error, return unauthorized
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
+	}
+
+	// Print user details to verify if the data is correct
+	fmt.Printf("User: %+v\n", user)
+
+	// Compare password
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])) != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid email or password"})
+	}
+
+	// Generate JWT token
+	secretKey := os.Getenv("SECRET_KEY")
+	if secretKey == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Secret key not configured"})
+	}
+
+	claims := jwt.MapClaims{
+		"email": user.Email,
+		"type":  user.Type, // The type ID from user
+		"exp":   time.Now().Add(time.Hour * 240).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	t, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
+	}
+
+	// Return user info along with the token
+	return c.JSON(fiber.Map{
+		"token":     t,
+		"email":     user.Email,
+		"phone":     user.Phone,
+		"full_name": user.FullName,
+		"type":      user.TypeInfo.ID, // This will now correctly show the type from the related TypeUser table
 	})
 }
 

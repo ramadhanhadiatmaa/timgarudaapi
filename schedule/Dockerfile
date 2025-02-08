@@ -7,14 +7,14 @@ COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 go build -o schedule-garuda-dev
+RUN CGO_ENABLED=0 go build -o schedule-garuda
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=build /app/schedule-garuda-dev .
+COPY --from=build /app/schedule-garuda .
 
 EXPOSE 6414
 
-CMD [ "./schedule-garuda-dev" ]
+CMD [ "./schedule-garuda" ]

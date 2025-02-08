@@ -3,6 +3,7 @@ package main
 import (
 	"auth/models"
 	"auth/routes"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -11,11 +12,16 @@ import (
 func main() {
 	models.ConnectDatabase()
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "6410"
+	}
+
 	app := fiber.New()
 
 	app.Use(cors.New())
 
 	routes.Route(app)
 
-	app.Listen(":6710")
+	app.Listen(":" + port)
 }

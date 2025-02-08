@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"schedule/models"
 	"strconv"
 
@@ -37,17 +38,32 @@ func IndexTeam(c *fiber.Ctx) error {
 }
 
 func CreateTeam(c *fiber.Ctx) error {
-	var data models.Team
-
+	var data map[string]interface{}
 	if err := c.BodyParser(&data); err != nil {
 		return jsonResponse(c, fiber.StatusBadRequest, "Invalid input", err.Error())
 	}
 
-	if err := models.DB.Create(&data).Error; err != nil {
-		return jsonResponse(c, fiber.StatusInternalServerError, "Failed to save data", err.Error())
+	allowedKeys := []string{"team", "flag"}
+
+	for key := range data {
+		if !contains(allowedKeys, key) {
+			return jsonResponse(c, fiber.StatusBadRequest, "Inputting data is not allowed", nil)
+		}
 	}
 
-	return jsonResponse(c, fiber.StatusCreated, "Data successfully added", data)
+	if exampleValue, exists := data["team"]; exists {
+		dataVal := models.Team{
+			Team: fmt.Sprintf("%v", exampleValue),
+		}
+
+		if err := models.DB.Create(&dataVal).Error; err != nil {
+			return jsonResponse(c, fiber.StatusInternalServerError, "Failed to save data", err.Error())
+		}
+
+		return jsonResponse(c, fiber.StatusCreated, "Data successfully added", dataVal)
+	}
+	
+	return jsonResponse(c, fiber.StatusBadRequest, "'example' key is required", nil)
 }
 
 func UpdateTeam(c *fiber.Ctx) error {
@@ -90,4 +106,13 @@ func DeleteTeam(c *fiber.Ctx) error {
 	}
 
 	return jsonResponse(c, fiber.StatusOK, "Successfully deleted data", nil)
+}
+
+func contains(slice []string, item string) bool {
+	for _, a := range slice {
+		if a == item {
+			return true
+		}
+	}
+	return false
 }

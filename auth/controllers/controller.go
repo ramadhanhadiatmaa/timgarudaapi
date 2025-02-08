@@ -67,7 +67,7 @@ func Register(c *fiber.Ctx) error {
 			"email":     newUser.Email,
 			"full_name": newUser.FullName,
 			"phone":     newUser.Phone,
-			"type":      newUser.TypeInfo.Type, // Menampilkan TypeInfo yang sudah terpreload
+			"type":      newUser.Type, // Menampilkan TypeInfo yang sudah terpreload
 		},
 	})
 }
@@ -214,7 +214,7 @@ func Login(c *fiber.Ctx) error {
 		"email":     user.Email,
 		"phone":     user.Phone,
 		"full_name": user.FullName,
-		"type":      user.TypeInfo.ID, // This will now correctly show the type from the related TypeUser table
+		"type":      user.Type, // This will now correctly show the type from the related TypeUser table
 	})
 }
 

@@ -12,7 +12,9 @@ jobs:
     strategy:
       matrix:
         service:
+          - auth
           - data
+          - schedule
 
     steps:
       # Checkout code
@@ -53,7 +55,9 @@ jobs:
             sudo docker-compose -f /var/www/garudadev/docker-compose.yml down || true
             
             # Pull the latest Docker images
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/auth-garuda:v1.0
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/data-garuda:v1.0
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/schedule-garuda:v1.0
 
             # Start services using docker-compose
             sudo docker-compose -f /var/www/garudadev/docker-compose.yml up -d

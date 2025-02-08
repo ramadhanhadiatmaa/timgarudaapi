@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"schedule/models"
 	"strconv"
 
@@ -38,17 +39,32 @@ func Index(c *fiber.Ctx) error {
 }
 
 func Create(c *fiber.Ctx) error {
-	var data models.Schedule
-
+	var data map[string]interface{}
 	if err := c.BodyParser(&data); err != nil {
 		return jsonResponse(c, fiber.StatusBadRequest, "Invalid input", err.Error())
 	}
 
-	if err := models.DB.Create(&data).Error; err != nil {
-		return jsonResponse(c, fiber.StatusInternalServerError, "Failed to save data", err.Error())
+	allowedKeys := []string{"home_id", "away_id", "venue", "date"}
+
+	for key := range data {
+		if !contains(allowedKeys, key) {
+			return jsonResponse(c, fiber.StatusBadRequest, "Inputting data is not allowed", nil)
+		}
 	}
 
-	return jsonResponse(c, fiber.StatusCreated, "Data successfully added", data)
+	if exampleValue, exists := data["venue"]; exists {
+		dataVal := models.Schedule{
+			Venue: fmt.Sprintf("%v", exampleValue),
+		}
+
+		if err := models.DB.Create(&dataVal).Error; err != nil {
+			return jsonResponse(c, fiber.StatusInternalServerError, "Failed to save data", err.Error())
+		}
+
+		return jsonResponse(c, fiber.StatusCreated, "Data successfully added", dataVal)
+	}
+	
+	return jsonResponse(c, fiber.StatusBadRequest, "'example' key is required", nil)
 }
 
 func Update(c *fiber.Ctx) error {

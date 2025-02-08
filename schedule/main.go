@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"schedule/models"
 	"schedule/routes"
 
@@ -11,11 +12,16 @@ import (
 func main() {
 	models.ConnectDatabase()
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "6414"
+	}
+
 	app := fiber.New()
 
 	app.Use(cors.New())
 
 	routes.Route(app)
 
-	app.Listen(":6414")
+	app.Listen(":" + port)
 }

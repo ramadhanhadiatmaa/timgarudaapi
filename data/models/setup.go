@@ -13,7 +13,7 @@ var DB *gorm.DB
 
 func ConnectDatabase() {
 
-	if err := godotenv.Load("../.env"); err != nil {
+	if err := godotenv.Load(/* "../.env" */); err != nil {
 		log.Fatalf("Failed to load .env file: %v", err)
 	}
 
